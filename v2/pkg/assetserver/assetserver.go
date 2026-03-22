@@ -3,12 +3,12 @@ package assetserver
 import (
 	"bytes"
 	"fmt"
+	"html/template"
 	"math/rand"
 	"net/http"
 	"strings"
 
 	"golang.org/x/net/html"
-	"html/template"
 
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"

@@ -20,6 +20,7 @@ import (
 
 	"github.com/bep/debounce"
 	"github.com/wailsapp/go-webview2/pkg/edge"
+
 	"github.com/wailsapp/wails/v2/internal/binding"
 	"github.com/wailsapp/wails/v2/internal/frontend"
 	"github.com/wailsapp/wails/v2/internal/frontend/desktop/windows/win32"
@@ -34,7 +35,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
-const startURL = "http://wails.localhost/"
+const startURL = "http://localhost/"
 
 var secondInstanceBuffer = make(chan options.SecondInstanceData, 1)
 
@@ -97,6 +98,18 @@ func NewFrontend(ctx context.Context, appoptions *options.App, myLogger *logger.
 
 	if port, _ := ctx.Value("assetserverport").(string); port != "" {
 		result.startURL.Host = net.JoinHostPort(result.startURL.Host, port)
+		if token, _ := ctx.Value("assetservertoken").(string); token != "" {
+			q := result.startURL.Query()
+			q.Set("_wails", token)
+			result.startURL.RawQuery = q.Encode()
+		}
+	}
+	if result.startURL != nil && result.startURL.RawQuery == "" {
+		if token, _ := ctx.Value("assetservertoken").(string); token != "" {
+			q := result.startURL.Query()
+			q.Set("_wails", token)
+			result.startURL.RawQuery = q.Encode()
+		}
 	}
 
 	var bindings string

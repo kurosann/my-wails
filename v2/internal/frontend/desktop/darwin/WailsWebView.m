@@ -1,10 +1,24 @@
 #import "WailsWebView.h"
 #import "message.h"
 
+static NSString * const WKMenuItemIdentifierOpenFrameInNewWindow = @"WKMenuItemIdentifierOpenFrameInNewWindow";
 
 @implementation WailsWebView
 @synthesize disableWebViewDragAndDrop;
 @synthesize enableDragAndDrop;
+
+- (void)willOpenMenu:(NSMenu *)menu withEvent:(NSEvent *)event {
+	[super willOpenMenu:menu withEvent:event];
+	NSMutableArray<NSMenuItem *> *toRemove = [NSMutableArray array];
+	for (NSMenuItem *item in [menu itemArray]) {
+		if ([item.identifier isEqualToString:WKMenuItemIdentifierOpenFrameInNewWindow]) {
+			[toRemove addObject:item];
+		}
+	}
+	for (NSMenuItem *item in toRemove) {
+		[menu removeItem:item];
+	}
+}
 
 - (BOOL)prepareForDragOperation:(id<NSDraggingInfo>)sender
 {

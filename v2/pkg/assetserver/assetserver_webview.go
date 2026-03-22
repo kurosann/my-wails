@@ -141,10 +141,10 @@ func (d *AssetServer) processWebViewRequestInternal(r webview.Request) {
 		req.Host = host
 	}
 
-	if expectedHost := d.ExpectedWebViewHost; expectedHost != "" && expectedHost != req.Host {
-		d.webviewRequestErrorHandler(uri, rw, fmt.Errorf("expected host '%s' in request, but was '%s'", expectedHost, req.Host))
-		return
-	}
+	//if expectedHost := d.ExpectedWebViewHost; expectedHost != "" && expectedHost != req.Host {
+	//	d.webviewRequestErrorHandler(uri, rw, fmt.Errorf("expected host '%s' in request, but was '%s'", expectedHost, req.Host))
+	//	return
+	//}
 
 	d.ServeHTTP(rw, req)
 }
