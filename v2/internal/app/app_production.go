@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -20,6 +21,13 @@ import (
 	"github.com/wailsapp/wails/v2/internal/menumanager"
 	"github.com/wailsapp/wails/v2/pkg/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options"
+)
+
+const (
+	productionAssetServerHost = "127.0.0.1"
+	// Use a stable non-ephemeral port so the webview origin stays sticky and frontend caches survive restarts.
+	productionAssetServerStartPort = 28645
+	productionAssetServerPortTries = 512
 )
 
 func (a *App) Run() error {
@@ -56,6 +64,23 @@ func isLikelyExternalBrowser(ua string) bool {
 		return true
 	}
 	return false
+}
+
+func listenOnIteratedPort(host string, startPort, tries int) (net.Listener, int, error) {
+	if tries <= 0 {
+		tries = 1
+	}
+
+	for offset := 0; offset < tries; offset++ {
+		port := startPort + offset
+		listener, err := net.Listen("tcp", net.JoinHostPort(host, strconv.Itoa(port)))
+		if err == nil {
+			return listener, port, nil
+		}
+	}
+
+	endPort := startPort + tries - 1
+	return nil, 0, fmt.Errorf("failed to bind production asset server on %s ports %d-%d", host, startPort, endPort)
 }
 
 // CreateApp creates the app!
@@ -177,11 +202,14 @@ func CreateApp(appoptions *options.App) (*App, error) {
 		rejectRequest(w)
 	})
 
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	listener, port, err := listenOnIteratedPort(
+		productionAssetServerHost,
+		productionAssetServerStartPort,
+		productionAssetServerPortTries,
+	)
 	if err != nil {
 		return nil, err
 	}
-	port := listener.Addr().(*net.TCPAddr).Port
 	go func() {
 		if err := http.Serve(listener, handler); err != nil && err != http.ErrServerClosed {
 			myLogger.Error("Production asset HTTP server: %s", err)
@@ -189,9 +217,9 @@ func CreateApp(appoptions *options.App) (*App, error) {
 	}()
 	// Pass token down via context; starturl carries the token so only our window can load it.
 	ctx = context.WithValue(ctx, "assetservertoken", assetToken)
-	startURL, _ := url.Parse("http://127.0.0.1:" + strconv.Itoa(port) + "/?_wails=" + assetToken)
+	startURL, _ := url.Parse("http://" + net.JoinHostPort(productionAssetServerHost, strconv.Itoa(port)) + "/?_wails=" + assetToken)
 	ctx = context.WithValue(ctx, "starturl", startURL)
-	myLogger.Debug("Serving assets at http://127.0.0.1:%d (token-protected)", port)
+	myLogger.Debug("Serving assets at http://%s:%d (token-protected)", productionAssetServerHost, port)
 
 	appFrontend := desktop.NewFrontend(ctx, appoptions, myLogger, appBindings, messageDispatcher)
 	eventHandler.AddFrontend(appFrontend)
